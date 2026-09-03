@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	db := NewDb()
 	listener, err := net.Listen("tcp", ":6379")
 	if err != nil {
 		panic(err)
@@ -23,21 +24,19 @@ func main() {
 			continue
 		}
 
-		go handleConn(conn)
+		go handleConn(conn, db)
 
 	}
 }
 
-
-
-func handleConn(conn net.Conn) {
+func handleConn(conn net.Conn, db *DB) {
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 
 	for {
 		prefix, err := reader.ReadByte()
 		if err != nil {
-			
+
 			if err == io.EOF {
 				fmt.Println("EOF, client connection closed")
 			} else {
@@ -51,6 +50,19 @@ func handleConn(conn net.Conn) {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(data)
+
+		dataArray, ok := data.([]any)
+		if !ok {
+			fmt.Println("expected RESP array")
+			return
+		}
+
+		value, err := handleDBOps(dataArray, db)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		response := fmt.Appendf(nil, "+%s\r\n", value)
+		conn.Write(response)
 	}
 }

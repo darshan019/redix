@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
-	"time"
 )
 
 func send(conn net.Conn, payload string, name string) {
@@ -15,7 +15,8 @@ func send(conn net.Conn, payload string, name string) {
 		return
 	}
 
-	time.Sleep(500 * time.Millisecond)
+	response, _ := bufio.NewReader(conn).ReadString('\n')
+	fmt.Println(response)
 }
 
 func main() {
@@ -24,6 +25,33 @@ func main() {
 		panic(err)
 	}
 	defer conn.Close()
+
+	send(
+		conn,
+		"*3\r\n+SET\r\n+foo\r\n+bar\r\n",
+		"SET",
+	)
+
+	send(
+		conn,
+		"*3\r\n+SET\r\n+lob\r\n+bobo\r\n",
+		"SET",
+	)
+
+	send(
+		conn,
+		"*2\r\n+GET\r\n+foo\r\n",
+		"GET",
+	)
+
+	send(
+		conn,
+		"*2\r\n+DEL\r\n+foo\r\n",
+		"DELETE",
+	)
+}
+
+func test(conn net.Conn) {
 
 	// + Simple String
 	send(
