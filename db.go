@@ -1,27 +1,51 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type DB struct {
 	db map[string]any
+	mu *sync.Mutex
 }
 
 func (db *DB) Set(key string, value any) {
+	db.mu.Lock()
 	db.db[key] = value
+	db.mu.Unlock()
 }
 
 func (db *DB) Get(key string) any {
+	db.mu.Lock()
+	defer db.mu.Unlock()
 	return db.db[key]
+}
+
+func (db *DB) Delete(key string) error {
+	value := db.Get(key)
+	if value == nil {
+		return fmt.Errorf("key not found")
+	}
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	delete(db.db, key)	
+	return nil
 }
 
 func NewDb() *DB {
 	return &DB{
 		db: make(map[string]any),
+		mu: &sync.Mutex{},
 	}
 }
 
 func handleDBOps(data []any, db *DB) (any, error) {
-	switch data[0] {
+	cmd, ok := data[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid command")
+	}
+	switch cmd {
 	case "SET":
 		db.Set(data[1].(string), data[2])
 		return "OK", nil
@@ -33,13 +57,10 @@ func handleDBOps(data []any, db *DB) (any, error) {
 		if !ok {
 			return nil, fmt.Errorf("invalid argument")
 		}
-
-		value := db.Get(key)
-		if value == nil {
-			return nil, fmt.Errorf("key not found")
+		err := db.Delete(key)
+		if err != nil {
+			return nil, err
 		}
-
-		delete(db.db, key)
 		return "OK", nil
 	default:
 		return nil, fmt.Errorf("Invalid command")

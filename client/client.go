@@ -26,6 +26,9 @@ func main() {
 	}
 	defer conn.Close()
 
+	send(conn, "*1\r\n+PING\r\n", "PING")
+	send(conn, "*2\r\n+ECHO\r\n$5\r\nhello\r\n", "ECHO")
+
 	send(
 		conn,
 		"*3\r\n+SET\r\n+foo\r\n+bar\r\n",

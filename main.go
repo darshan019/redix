@@ -54,15 +54,23 @@ func handleConn(conn net.Conn, db *DB) {
 		dataArray, ok := data.([]any)
 		if !ok {
 			fmt.Println("expected RESP array")
-			return
+			_, _ = conn.Write([]byte("ERR expected array\r\n"))
+			continue
 		}
 
-		value, err := handleDBOps(dataArray, db)
+		value, err := handleCommands(dataArray, db)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		response := fmt.Appendf(nil, "+%s\r\n", value)
-		conn.Write(response)
+		// fmt.Println(db.db, value)
+		response := fmt.Appendf(nil, "+%v\r\n", value)
+		_, err = conn.Write(response)
+
+		if err != nil {
+			fmt.Println("write error:", err)
+			return
+		}
+		fmt.Println(string(response))
 	}
 }
